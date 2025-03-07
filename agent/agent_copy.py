@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from custom_agent import CustomAgent
 from torch.distributions import Categorical
 
 
@@ -11,16 +10,6 @@ class Agents:
         self.n_agents = args.n_agents
         self.state_shape = args.state_shape
         self.obs_shape = args.obs_shape
-        #选择自定义智能体进行训练
-        if args.custom_agent:            
-            self.n_agents = [
-                CustomAgent(
-                    no=i,
-                    position=[0, 0, 0],
-                    angle=[0, 0, 0],
-                    speed=1.0,# 根据实际情况传入网络
-                ) for i in range(self.n_agents)
-            ]    
         if args.alg == 'vdn':
             from policy.vdn import VDN
             self.policy = VDN(args)
@@ -55,10 +44,6 @@ class Agents:
     def choose_action(self, obs, last_action, agent_num, avail_actions, epsilon, maven_z=None):
         inputs = obs.copy()
         avail_actions_ind = np.nonzero(avail_actions)[0]  # index of actions which can be choose
-        
-        # 如果当前 agent 是 CustomAgent，则调用其方法
-        if isinstance(self.agents[agent_num], CustomAgent):
-            self.n_agents[agent_num].update_state(inputs)           
 
         # transform agent_num to onehot vector
         agent_id = np.zeros(self.n_agents)
@@ -95,11 +80,6 @@ class Agents:
                 action = np.random.choice(avail_actions_ind)  # action是一个整数
             else:
                 action = torch.argmax(q_value)
-
-        #如果是 CustomAgent，存储动作索引
-        if isinstance(self.n_agents[agent_num], CustomAgent):
-            self.n_agents[agent_num].act_index = action
-            
         return action
 
     def _choose_action_from_softmax(self, inputs, avail_actions, epsilon):
@@ -228,4 +208,3 @@ class CommAgents:
         self.policy.learn(batch, max_episode_len, train_step, epsilon)
         if train_step > 0 and train_step % self.args.save_cycle == 0:
             self.policy.save_model(train_step)
-        

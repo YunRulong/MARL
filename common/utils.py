@@ -71,3 +71,53 @@ def td_lambda_target(batch, max_episode_len, q_targets, args):
                                            n_step_return[:, transition_idx, :, max_episode_len - transition_idx - 1]
     # --------------------------------------------------lambda return---------------------------------------------------
     return lambda_return
+
+class Guidance:#比例导引
+    learnable=False
+    
+    def __init__(self,g,k1,k2) -> None:
+        self.missile=None#所属的导弹
+        self.g=g
+        self.k1=k1
+        self.k2=k2
+    def sample(self,state):
+        missile=self.missile;plane=self.missile.target
+        dpitch=m.atan((plane.z-missile.z)/((plane.x-missile.x)**2+(plane.y-missile.y)**2)**0.5)
+        nz=self.k1*((dpitch-missile.pitch)/m.pi/2)*missile.speed/self.g+m.cos(missile.pitch)
+        dy=(plane.y-missile.y);dx=plane.x-missile.x
+        dyaw=m.atan(abs(dy)/(abs(dx)+1e-8))
+        if dx<0 and dy<0:
+            dyaw+=-m.pi
+        elif dx<0 and dy>0:
+            dyaw=m.pi-dyaw
+        elif dx>0 and dy<0:
+            dyaw=-dyaw
+        dyaw=-dyaw
+        ddyaw=missile.yaw-dyaw
+        if ddyaw > m.pi:
+            ddyaw = ddyaw-2 * m.pi
+        elif ddyaw < -m.pi:
+            ddyaw = 2 * m.pi + ddyaw
+        ny=self.k2*((ddyaw)/m.pi/2)*missile.speed/self.g
+        #ny=dyaw
+        return ny,nz,0,0
+    def sample_old(self,state):#正常比例导引，但是不准可能存在错误，暂时弃用
+        missile=self.missile;target=self.missile.target
+        dx = missile.speed * m.cos(missile.pitch) * m.cos(missile.yaw)
+        dy = - missile.speed * m.cos(missile.pitch) * m.sin(missile.yaw)
+        dz = missile.speed * m.sin(missile.pitch)
+        dx_t = target.speed * m.cos(target.pitch) * m.cos(target.yaw)
+        dy_t = - target.speed * m.cos(target.pitch) * m.sin(target.yaw)
+        dz_t = target.speed * m.sin(target.pitch)
+        dist = missile.distence(target)
+        dR = ((missile.z - target.z) * (dz - dz_t) + (missile.y - target.y) * (dy - dy_t) + 
+              (missile.x - target.x) * (dx - dx_t)) / dist
+        dtheta_L = ((dz_t - dz) * m.sqrt((target.x - missile.x) ** 2 + (target.y - missile.y) ** 2) - 
+            (target.z - missile.z) * ((target.x - missile.x) * (dx_t - dx) + (target.y - missile.y) * (dy_t - dy)) / 
+            m.sqrt((target.x - missile.x) ** 2 + (target.y - missile.y) ** 2)) / (dist**2)
+        nz = self.k1 * abs(dR) * dtheta_L / self.g+np.cos(missile.pitch)
+        dfea_L = ((dy_t - dy) * (target.x - missile.x) - (target.y - missile.y) * (dx_t - dx)) / (
+                (target.x - missile.x) ** 2 + (target.y - missile.y) ** 2)
+        ny = self.k2 * abs(dR) * dfea_L / self.g
+
+        return ny,nz,0,0

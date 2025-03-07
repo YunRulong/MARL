@@ -11,20 +11,17 @@ class Runner:
         self.env = env
 
         if args.alg.find('commnet') > -1 or args.alg.find('g2anet') > -1:  # communication agent
-            #初始化通信智能体
             self.agents = CommAgents(args)
             self.rolloutWorker = CommRolloutWorker(env, self.agents, args)
         else:  # no communication agent
-            #初始化非通信智能体
             self.agents = Agents(args)
             self.rolloutWorker = RolloutWorker(env, self.agents, args)
             
         if not args.evaluate and args.alg.find('coma') == -1 and args.alg.find('central_v') == -1 and args.alg.find('reinforce') == -1:  # these 3 algorithms are on-poliy
-            #on poilcy算法不需要经验缓冲区，不是评估模式不需要经验缓冲区
             self.buffer = ReplayBuffer(args)
         self.args = args
-        self.win_rates = []#记录评估时的胜率
-        self.episode_rewards = []#记录评估时的奖励
+        self.win_rates = []
+        self.episode_rewards = []
 
         # 用来保存plt和pkl
         self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.map
@@ -32,10 +29,10 @@ class Runner:
             os.makedirs(self.save_path)
 
     def run(self, num):
-        time_steps, train_steps, evaluate_steps = 0, 0, -1#模拟时间部署，记录训练步数，记录评估步数
-        while time_steps < self.args.n_steps:#循环持续运行指导达到总步数
+        time_steps, train_steps, evaluate_steps = 0, 0, -1
+        while time_steps < self.args.n_steps:
             print('Run {}, time_steps {}'.format(num, time_steps))
-            if time_steps // self.args.evaluate_cycle > evaluate_steps:#整除时评估
+            if time_steps // self.args.evaluate_cycle > evaluate_steps:
                 win_rate, episode_reward = self.evaluate()
                 # print('win_rate is ', win_rate)
                 self.win_rates.append(win_rate)
@@ -55,13 +52,10 @@ class Runner:
             for episode in episodes:
                 for key in episode_batch.keys():
                     episode_batch[key] = np.concatenate((episode_batch[key], episode[key]), axis=0)
-            #训练智能体
             if self.args.alg.find('coma') > -1 or self.args.alg.find('central_v') > -1 or self.args.alg.find('reinforce') > -1:
-                #on-policy算法使用当前的数据进行训练
                 self.agents.train(episode_batch, train_steps, self.rolloutWorker.epsilon)
                 train_steps += 1
             else:
-                #off-policy算法使用经验容器中的数据统一训练
                 self.buffer.store_episode(episode_batch)
                 for train_step in range(self.args.train_steps):
                     mini_batch = self.buffer.sample(min(self.buffer.current_size, self.args.batch_size))
