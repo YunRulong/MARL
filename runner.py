@@ -4,6 +4,7 @@ from common.rollout import RolloutWorker, CommRolloutWorker
 from agent.agent import Agents, CommAgents
 from common.replay_buffer import ReplayBuffer
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 class Runner:
@@ -27,7 +28,7 @@ class Runner:
         self.episode_rewards = []#记录评估时的奖励
 
         # 用来保存plt和pkl
-        self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.map
+        self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.map +datetime.now().strftime("%Y-%m-%d %H-%M-%S")
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 

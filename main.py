@@ -1,6 +1,5 @@
 from runner import Runner
 from environment.environment import Env
-from train import *
 #from smac.env import StarCraft2Env
 from common.arguments import get_common_args, get_coma_args, get_mixer_args, get_centralv_args, get_reinforce_args, get_commnet_args, get_g2anet_args
 
@@ -39,10 +38,9 @@ if __name__ == '__main__':
         
         runner = Runner(env, args)
         if not args.evaluate:
-            #train(args)
             runner.run(i)
         else:
             win_rate, _ = runner.evaluate()
             print('The win rate of {} is  {}'.format(args.alg, 0))
             break
-        env.close()
+        #env.close()

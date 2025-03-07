@@ -22,8 +22,10 @@ class RolloutWorker:
 
     @torch.no_grad()
     def generate_episode(self, episode_num=None, evaluate=False):
+        '''
         if self.args.replay_dir != '' and evaluate and episode_num == 0:  # prepare for save replay of evaluation
             self.env.close()
+        '''        
         o, u, r, s, avail_u, u_onehot, terminate, padded = [], [], [], [], [], [], [], []
         self.env.reset()
         terminated = False
@@ -47,7 +49,7 @@ class RolloutWorker:
             z_prob = self.agents.policy.z_policy(state)
             maven_z = one_hot_categorical.OneHotCategorical(z_prob).sample()
             maven_z = list(maven_z.cpu())
-
+        episode_time = 0
         while not terminated and step < self.episode_limit:
             # time.sleep(0.2)
             obs = self.env.get_obs()
@@ -69,7 +71,8 @@ class RolloutWorker:
                 avail_actions.append(avail_action)
                 last_action[agent_id] = action_onehot
 
-            reward, terminated, info = self.env.step(actions)
+            reward, terminated, info, episode_time= self.env.step(actions)
+            
             win_tag = True if terminated and 'battle_won' in info and info['battle_won'] else False
             o.append(obs)
             s.append(state)
@@ -80,9 +83,16 @@ class RolloutWorker:
             terminate.append([terminated])
             padded.append([0.])
             episode_reward += reward
-            step += 1
+            step += 1            
             if self.args.epsilon_anneal_scale == 'step':
                 epsilon = epsilon - self.anneal_epsilon if epsilon > self.min_epsilon else epsilon
+        print(
+            f"episode_num: {episode_num:<3} | "  # <3 表示左对齐，占3字符
+            f"episode_time: {round(episode_time, 2):<5} | "  # <5 占5字符
+            f"episode_reward: {round(episode_reward, 2):<5} | "
+            f"step: {step}"
+        )
+        #print('episode_num:',episode_num,"\t| episode_time:",round(episode_time,2),'\t\t| episode_reward:',round(episode_reward,2),'\t\t| step:',step)
         # last obs
         obs = self.env.get_obs()
         state = self.env.get_state()
@@ -136,7 +146,7 @@ class RolloutWorker:
             episode['z'] = np.array([maven_z.copy()])
         if evaluate and episode_num == self.args.evaluate_epoch - 1 and self.args.replay_dir != '':
             self.env.save_replay()
-            self.env.close()
+            #self.env.close()
         return episode, episode_reward, win_tag, step
 
 
@@ -159,8 +169,11 @@ class CommRolloutWorker:
 
     @torch.no_grad()
     def generate_episode(self, episode_num=None, evaluate=False):
+        '''
         if self.args.replay_dir != '' and evaluate and episode_num == 0:  # prepare for save replay
             self.env.close()
+        '''
+        
         o, u, r, s, avail_u, u_onehot, terminate, padded = [], [], [], [], [], [], [], []
         self.env.reset()
         terminated = False
@@ -262,5 +275,5 @@ class CommRolloutWorker:
             # print('Epsilon is ', self.epsilon)
         if evaluate and episode_num == self.args.evaluate_epoch - 1 and self.args.replay_dir != '':
             self.env.save_replay()
-            self.env.close()
+            #self.env.close()
         return episode, episode_reward, win_tag, step

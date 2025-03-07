@@ -1,6 +1,8 @@
 import numpy as np
 import math as m
 import copy
+import csv
+import os
 from typing import Tuple
 class tool:
     def norm(input,min,max):
@@ -22,6 +24,14 @@ class tool:
             diff = list1[i] - list2[i]
             sum_squares += diff ** 2    
         return sum_squares ** 0.5
+    def write_csv(save_dir,data,header):
+        folder_path = os.path.dirname(save_dir)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        data.insert(0,header)
+        with open(save_dir, 'w', encoding='utf-8', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(data)
     
 class Guidance:#比例导引
     def __init__(self,args) -> None:
@@ -94,10 +104,9 @@ class Object:
         self.target=None
         self.launched=False
         self.state=None
-        self.next_state=None
         self.act_index=None
         self.act=None
-        self.donw=False
+        self.done=False
         self.reward=0
     @property
     def x(self):
@@ -144,7 +153,7 @@ class Missile(Object):
         super().__init__(no,position,angle,speed)
         self.missile_train_mode = missile_mode
         self.big_reward=False    
-    def pnorm(self,boundary:list):
+    def pnorm(self,boundary):
         res=[]#boundary格式类似[[0,20000],[0,20000],[0,20000]]表示x,y,z的范围
         for i in range(3):
             res.append(tool.norm(self.position[i],boundary[i][0],boundary[i][1]))
@@ -172,11 +181,11 @@ class Missile(Object):
         return MissileActionSpace.missile_get(self.missile_train_mode)
     def get_reward(self,boundary):
         reward = 0        
-        r=boundary[0][1]-boundary[0][0]
-        distence=self.distence(self.target)
-        reward+=(r/2-distence)/(r/2)
+        #r=boundary[0][1]-boundary[0][0]
+        #distence=self.distence(self.target)
+        #reward+=(r/2-distence)/(r/2)
         if self.done and (not self.big_reward):
-            reward +=10
+            reward +=1
             self.big_reward=True
         return reward
     def common_guidance(self,plane,k1,k2,g):
@@ -200,7 +209,7 @@ class Missile(Object):
         return ny,nz,0,0
     
     def step(self,k1,k2,roll,g,dt):#step
-        ny,nz,_,_=self.common_guidance(self,self.target,k1,k2,g)
+        ny,nz,_,_=self.common_guidance(self.target,k1,k2,g)
         self.pitch += g / self.speed * (nz - m.cos(self.pitch)) * dt
         self.yaw -= g / (self.speed * m.cos(self.pitch)) * ny * dt
         dx = self.speed * m.cos(self.pitch) * m.cos(self.yaw)
