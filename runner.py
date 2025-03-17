@@ -45,6 +45,7 @@ class Runner:
                 evaluate_steps += 1
             episodes = []
             # 收集self.args.n_episodes个episodes
+            # 并行工作可改造成分布式进行
             for episode_idx in range(self.args.n_episodes):
                 episode, _, _, steps = self.rolloutWorker.generate_episode(episode_idx)
                 episodes.append(episode)
