@@ -34,17 +34,6 @@ Use `pip install -r requirements.txt` to install the following requirements:
 + [SMAC](https://github.com/oxwhirl/smac)
 + [pymarl](https://github.com/oxwhirl/pymarl)
 
-
-## TODO List
-
-- [x] Add CUDA option
-- [x] DyMA-CL
-- [x] G2ANet
-- [x] MAVEN
-- [ ] VBC
-- [ ] Other SOTA MARL algorithms
-- [ ] Update results on other maps
-
 ## Quick Start
 
 ```shell
@@ -63,3 +52,16 @@ If you want to see the replay, make sure the `replay_dir` is an absolute path, w
 
 ## 环境
 多智能体环境使用自行编写的environment环境，存放于environment文件夹下，目前仅实现了多导弹对抗的部分，没有飞机。另外当前项目并没有完全查完错误，环境接口可以参考env的返回函数
+
+## environment 文件夹介绍
+    文件夹内共有两个文件一个是作为environment环境的主程序，另外一个作为定义导弹的类型的辅助程序。
+    环境主程序中主要函数有init，reset，step，get_state,get_obs,这几个主要函数，init用于在程序初始化环境时将args中的参
+    数传入env对象，reset函数用于在强化学习的每一个episode开始时重新将双方的智能体归位，step函数用于智能体模拟推演的迭
+    代，get_state与get_obs的作用类似，都是在强化学习中用于返回状态的函数，前者用于返回全局状态，后者用于返回智能体的观测
+    状态。
+    
+    具体的调用流程是，训练开始-》调用init，训练共重复n个episode，每一个episode开始时-》调用reset，在单个episode内进行推
+    演时，每一步都需要调用观测的get_obs和get_state函数，用于得到当前状态，根据当前状态网络输出动作决策，传入step函数进行
+    一次动作。相关函数的作用已经注释在environment.py里
+
+    missile文件内已经写好了基础导弹的object类，如果要扩展导弹可以通过集成object类来实现，具体的导弹不同的特性可以在自己的step函数中定义，guidance类用于实现比例导引，tool类用于missile类内的一些常用的归一化方法。
